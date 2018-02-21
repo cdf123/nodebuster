@@ -1,0 +1,17 @@
+{
+  "name": "nodebuster",
+  "version": "0.0.1",
+  "description": "Directory brute forcer written in nodejs",
+  "main": "nodebuster.js",
+  "scripts": {
+    "test": "nodebuster.js --help"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "argv": "0.0.2",
+    "axios": "^0.18.0",
+    "debug": "^3.1.0",
+    "supports-color": "^5.2.0"
+  }
+}
