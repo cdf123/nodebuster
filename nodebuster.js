@@ -12,6 +12,8 @@ const args = require('argv').option([
 	{name:'wordlist', type:'string'},
 	{name:'extensions', type:'string'},
 	{name:'proxy', type:'string'},
+	{name:'proxyauth', type:'string'},
+	{name:'cookies', type:'boolean'},
 	{name:'help', type:'boolean'}
 ]).run().options;
 
@@ -47,7 +49,7 @@ var axios_config = {
 	// options are 'arraybuffer', 'blob', 'document', 'json', 'text', 'stream'
 	responseType: 'text',
 	// `maxContentLength` defines the max size of the http response content allowed
-	maxContentLength: 2000,
+	maxContentLength: (1024^2)*2, //2MB
 	// `validateStatus` defines whether to resolve or reject the promise for a given
 	// HTTP response status code. If `validateStatus` returns `true` (or is set to `null`
 	// or `undefined`), the promise will be resolved; otherwise, the promise will be
@@ -89,10 +91,22 @@ var get = (url) => {
 		axios.get(url, axios_config)
 		.then(response => {
 			if(status_regex.test(response.status)){
-				console.log('url: ' + url + '\tstatus: ' + response.status + '\tlength: ' + response.data.length + '\tmd5: ' + md5(response.data));
+				var out = 'url: ' + url + '\tstatus: ' + response.status + '\tlength: ' + response.data.length + '\tmd5: ' + md5(response.data);
+				if(args.cookies){
+					if(response.headers['set-cookie'] !== undefined){
+						if(Array.isArray(response.headers['set-cookie'])){
+							for(var i = 0; i < response.headers['set-cookie'].length; i++){
+								out = out + '\n\tset-cookie: ' + response.headers['set-cookie'][i];
+							}
+						}else{
+							out = out + '\n\tset-cookie: ' + response.headers['set-cookie'];
+						}
+					}
+				}
+				console.log(out);
 				resolve(response.status);
 			}else{
-				debug('url: ' + url + '\tstatus: ' + response.status);
+				//debug('url: ' + url + '\tstatus: ' + response.status);
 				resolve(-1);
 			}
 		})
@@ -119,13 +133,13 @@ var word = (path, word) => {
 	return Promise.all(p);
 };
 
-var dir = (path) => {
-	var p = [];
+var dir = async (path) => {
 	for(var w = 0; w < words.length; w++){
 		if(words[w].length === 0) continue;
-		p.push(word(path, words[w]));
+		if(/^#/.test(words[w])) continue;
+		//debug(process.memoryUsage());
+		await word(path, words[w]);
 	}
-	return Promise.all(p);
 };
 
 var load_words = new Promise((resolve, reject) => {
@@ -139,6 +153,7 @@ var load_words = new Promise((resolve, reject) => {
 		}
 	});
 }).then(async () => {
+	//debug(process.memoryUsage());
 	if(/\/$/.test(args.url)){
 		await dir(args.url);
 	}else{
